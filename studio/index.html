@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scratch Studio Embed</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing:border-box; }
+body { margin:0; font-family:'Poppins',sans-serif; background-color:#121212; color:#fff; display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding:20px;}
+.embed { display:flex; flex-direction:column; background-color:#1e1e1e; border-radius:15px; padding:25px; max-width:1000px; width:100%; }
+.header { display:flex; gap:20px; flex-wrap:wrap; }
+.studio-thumbnail { width:120px; height:120px; border-radius:15px; object-fit:cover; border:2px solid #fff; }
+.studio-info { display:flex; flex-direction:column; gap:10px; }
+.studio-title { font-size:26px; font-weight:600; }
+.studio-description { font-size:14px; color:#ccc; max-width:700px; }
+.stats { display:flex; gap:15px; align-items:center; font-size:14px; color:#ccc; flex-wrap:wrap; margin-top:5px;}
+.stats span { display:flex; align-items:center; gap:5px; }
+.projects { display:flex; gap:15px; overflow-x:auto; margin:25px 0; padding-bottom:10px; }
+.project { display:flex; flex-direction:column; width:180px; min-width:180px; cursor:pointer; text-align:center; }
+.project img { width:100%; border-radius:10px; transition:transform 0.2s; }
+.project img:hover { transform:scale(1.05); }
+.project-name { margin-top:6px; font-size:14px; color:#fff; }
+.open-scratch { background:#1d70b8; color:#fff; text-decoration:none; padding:12px 18px; border-radius:10px; text-align:center; width:fit-content; transition:background 0.3s; }
+.open-scratch:hover { background:#155a8a; }
+.username-form { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.username-form input { padding:10px; font-size:16px; border-radius:6px; border:none; width:250px; }
+.username-form button { padding:10px 12px; font-size:16px; border-radius:6px; border:none; background:#1d70b8; color:#fff; cursor:pointer; transition:background 0.3s; }
+.username-form button:hover { background:#155a8a; }
+</style>
+</head>
+<body>
+<div class="embed" id="embed"></div>
+
+<script>
+async function fetchStudio(studioId){
+  const embed = document.getElementById('embed');
+  embed.innerHTML = `<p>Loading studio data...</p>`;
+  try{
+    // Studio info
+    const studioRes = await fetch(`https://corsproxy.io/?url=https://api.scratch.mit.edu/studios/${studioId}`);
+    if(!studioRes.ok) throw new Error('Studio not found');
+    const studioData = await studioRes.json();
+
+    // Fetch projects
+    const projectsRes = await fetch(`https://corsproxy.io/?url=https://api.scratch.mit.edu/studios/${studioId}/projects`);
+    const projectsData = await projectsRes.json();
+    const top5Projects = projectsData.slice(0,5);
+
+    embed.innerHTML = `
+      <div class="header">
+        <img class="studio-thumbnail" src="${studioData.image || 'https://cdn2.scratch.mit.edu/get_image/studio/200x200.png'}" alt="Studio Thumbnail">
+        <div class="studio-info">
+          <div class="studio-title">${studioData.title}</div>
+          <div class="studio-description">${studioData.description || 'No description provided.'}</div>
+          <div class="stats">
+            <span><i class="fa-solid fa-box"></i> ${studioData.stats?.projects || 0}</span>
+            <span><i class="fa-solid fa-user"></i> ${studioData.stats?.followers || 0}</span>
+            <span><i class="fa-solid fa-users"></i> ${studioData.curator?.length || 0} curators</span>
+          </div>
+        </div>
+      </div>
+      <div class="projects">
+        ${top5Projects.map(p=>`
+          <div class="project" onclick="window.open('https://scratch.mit.edu/projects/${p.id}','_blank')">
+            <img src="${p.images?.['200x200']||p.image}" alt="${p.title}">
+            <div class="project-name">${p.title}</div>
+          </div>`).join('')}
+      </div>
+      <a class="open-scratch" href="https://scratch.mit.edu/studios/${studioData.id}" target="_blank">Open Studio in Scratch</a>
+    `;
+  }catch(err){
+    embed.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}
+
+// Handle studio input
+const embed = document.getElementById('embed');
+const urlParams = new URLSearchParams(window.location.search);
+let studioId = urlParams.get('studio');
+if(studioId){
+  fetchStudio(studioId);
+}else{
+  embed.innerHTML = `
+    <div class="username-form">
+      <input type="text" id="studioInput" placeholder="Enter Studio ID">
+      <button id="loadBtn">Load Studio</button>
+    </div>`;
+  document.getElementById('loadBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('studioInput').value.trim();
+    if(input){ embed.innerHTML=''; fetchStudio(input); }
+  });
+}
+</script>
+</body>
+</html>
