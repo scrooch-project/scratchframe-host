@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scratch Embed+</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; }
+body { margin:0; font-family:'Poppins', sans-serif; background-color:#121212; color:#fff; display:flex; justify-content:center; align-items:flex-start; min-height:100vh; padding:20px;}
+.embed { display:flex; flex-direction:column; background-color:#1e1e1e; border-radius:15px; padding:25px; max-width:1000px; width:100%; }
+.header { display:flex; gap:20px; flex-wrap:wrap; }
+.avatar-container { display:flex; flex-direction:column; align-items:center; }
+.avatar { width:100px; height:100px; border-radius:50%; border:2px solid #fff; }
+.tier { margin-top:10px; font-size:14px; color:#ccc; text-align:center; display:flex; align-items:center; gap:5px; }
+.tier .tooltip { position: relative; cursor: pointer; }
+.tier .tooltip .tooltiptext { visibility: hidden; width:180px; background-color:#333; color:#fff; text-align:center; border-radius:6px; padding:6px; position:absolute; z-index:1; bottom:125%; left:50%; margin-left:-90px; opacity:0; transition:opacity 0.3s; }
+.tier .tooltip:hover .tooltiptext { visibility: visible; opacity:1; }
+.user-info { display:flex; flex-direction:column; gap:10px; }
+.username { font-size:26px; font-weight:600; }
+.joined-stats { display:flex; gap:15px; align-items:center; font-size:14px; color:#ccc; flex-wrap:wrap; }
+.joined-stats span { display:flex; align-items:center; gap:5px; }
+.projects { display:flex; gap:15px; overflow-x:auto; margin:25px 0; padding-bottom:10px; }
+.project { display:flex; flex-direction:column; width:180px; min-width:180px; cursor:pointer; text-align:center; }
+.project img { width:100%; border-radius:10px; transition:transform 0.2s; }
+.project img:hover { transform:scale(1.05); }
+.project-name { margin-top:6px; font-size:14px; color:#fff; }
+.open-scratch { background:#1d70b8; color:#fff; text-decoration:none; padding:12px 18px; border-radius:10px; text-align:center; width:fit-content; transition:background 0.3s; }
+.open-scratch:hover { background:#155a8a; }
+.username-form { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+.username-form input { padding:10px; font-size:16px; border-radius:6px; border:none; width:250px; }
+.username-form button { padding:10px 12px; font-size:16px; border-radius:6px; border:none; background:#1d70b8; color:#fff; cursor:pointer; transition:background 0.3s; }
+.username-form button:hover { background:#155a8a; }
+</style>
+</head>
+<body>
+<div class="embed" id="embed"></div>
+
+<script>
+const tiers = [
+  "New Scratcher",
+  "Starter Scratcher",
+  "Fresh Scratcher",
+  "Aspiring Scratcher",
+  "Budding Scratcher",
+  "Smart Scratcher",
+  "Prodigy Scratcher",
+  "Master Scratcher"
+];
+
+const tierDescriptions = {
+  "New Scratcher": "Just joined Scratch, starting out!",
+  "Starter Scratcher": "Making first projects and learning.",
+  "Fresh Scratcher": "Getting more active and trying new things.",
+  "Aspiring Scratcher": "Shows consistent activity and creativity.",
+  "Budding Scratcher": "Gaining recognition and skills.",
+  "Smart Scratcher": "Experienced, creative, and well-known.",
+  "Prodigy Scratcher": "Top-tier projects and strong presence.",
+  "Master Scratcher": "Legendary Scratch user with many popular projects.",
+  "Owner": "The creator of this Scratch Embed+!"
+};
+
+function calculateTier(username, stats){
+  if(username.toLowerCase() === 'noahscratch493') return 'Owner';
+  const total = (stats.projects || 0) + (stats.loves || 0) + (stats.favorites || 0);
+  if(total < 5) return tiers[0];
+  if(total < 15) return tiers[1];
+  if(total < 30) return tiers[2];
+  if(total < 50) return tiers[3];
+  if(total < 80) return tiers[4];
+  if(total < 120) return tiers[5];
+  if(total < 200) return tiers[6];
+  return tiers[7];
+}
+
+async function fetchScratchUser(username){
+  const embed = document.getElementById('embed');
+  embed.innerHTML = `<p>Loading user data...</p>`;
+  try{
+    const userRes = await fetch(`https://corsproxy.io/?url=https://api.scratch.mit.edu/users/${username}`);
+    if(!userRes.ok) throw new Error('User not found');
+    const userData = await userRes.json();
+
+    const projectsRes = await fetch(`https://corsproxy.io/?url=https://api.scratch.mit.edu/users/${username}/projects`);
+    const projectsData = await projectsRes.json();
+    const top5Projects = projectsData.slice(0,5);
+
+    let totalLoves=0, totalFavorites=0;
+    projectsData.forEach(p=>{
+      if(p.stats){ totalLoves += p.stats.loves||0; totalFavorites += p.stats.favorites||0; }
+    });
+
+    const stats = { projects: projectsData.length, loves: totalLoves, favorites: totalFavorites };
+    const tier = calculateTier(username, stats);
+    const tierDesc = tierDescriptions[tier] || "";
+
+    embed.innerHTML = `
+      <div class="header">
+        <div class="avatar-container">
+          <img class="avatar" src="${userData.profile.images['90x90']}" alt="Avatar">
+          <div class="tier">${tier} 
+            <span class="tooltip"><i class="fa-solid fa-circle-question"></i>
+              <span class="tooltiptext">${tierDesc}</span>
+            </span>
+          </div>
+        </div>
+        <div class="user-info">
+          <div class="username">${userData.username}</div>
+          <div class="joined-stats">
+            <span><i class="fa-regular fa-calendar"></i> Joined: ${new Date(userData.history.joined).toLocaleDateString()}</span>
+            <span><i class="fa-solid fa-heart"></i> ${stats.loves}</span>
+            <span><i class="fa-solid fa-star"></i> ${stats.favorites}</span>
+            <span><i class="fa-solid fa-box"></i> ${stats.projects}</span>
+          </div>
+        </div>
+      </div>
+      <div class="projects">
+        ${top5Projects.map(p=>`
+          <div class="project" onclick="window.open('https://scratch.mit.edu/projects/${p.id}','_blank')">
+            <img src="${p.images?.['200x200']||p.image}" alt="${p.title}">
+            <div class="project-name">${p.title}</div>
+          </div>`).join('')}
+      </div>
+      <a class="open-scratch" href="https://scratch.mit.edu/users/${userData.username}" target="_blank">Open in Scratch</a>
+    `;
+  }catch(err){
+    embed.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}
+
+const embed = document.getElementById('embed');
+const urlParams = new URLSearchParams(window.location.search);
+let username = urlParams.get('username');
+
+if(username){ fetchScratchUser(username); }
+else{
+  embed.innerHTML = `
+    <div class="username-form">
+      <input type="text" id="usernameInput" placeholder="Enter Scratch username">
+      <button id="loadBtn">Load</button>
+    </div>`;
+  document.getElementById('loadBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('usernameInput').value.trim();
+    if(input){ embed.innerHTML=''; fetchScratchUser(input); }
+  });
+}
+</script>
+</body>
+</html>
